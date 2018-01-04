@@ -5,6 +5,7 @@ import numpy as np
 # image_data_format -> 'channels_last'
 
 import keras.applications.vgg19 as vgg19
+from scipy.misc import imsave
 from scipy.optimize import fmin_l_bfgs_b
 
 # Image reconstruction from layer 'conv4_2'
@@ -14,15 +15,17 @@ content_layer = 'block4_conv2'
 style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1',
                 'block4_conv1', 'block5_conv1']
 
+imgsize = 256
+
 style_weight, content_weight = 1, 1
 
 def load_image(path):
-    img = np.expand_dims(img_to_array(load_img(path, target_size=(256, 256))), axis=0)
+    img = np.expand_dims(img_to_array(load_img(path, target_size=(imgsize, imgsize))), axis=0)
     return vgg19.preprocess_input(img)
 
 # Taken from Keras example
 def deprocess_image(x):
-    x = x.reshape((img_nrows, img_ncols, 3))
+    x = x.reshape((imgsize, imgsize, 3))
     # Remove zero-center by mean pixel
     x[:, :, 0] += 103.939
     x[:, :, 1] += 116.779
@@ -37,7 +40,7 @@ def content_loss(content, new):
 
 def style_loss(style, new):
     style_gram, new_gram = gram_matrix(style), gram_matrix(new)
-    size = 256 ** 2
+    size = imgsize ** 2
     channels = 3
     return K.sum(K.square(style_gram - new_gram)) / (4. * (channels ** 2) * (size ** 2))
 
@@ -52,9 +55,9 @@ def gram_matrix(img):
 
 content_img = K.variable(load_image('./img/content/nyc.jpg'))
 style_img = K.variable(load_image('./img/style/starry_night.jpg'))
-generated_img = K.placeholder((1, 256, 256, 3))
+generated_img = K.placeholder((1, imgsize, imgsize, 3))
 
-assert content_img.shape == style_img.shape == generated_img.shape == (1, 256, 256, 3)
+assert content_img.shape == style_img.shape == generated_img.shape == (1, imgsize, imgsize, 3)
 
 input_tensor = K.concatenate([content_img, style_img, generated_img], axis=0)
 
@@ -95,6 +98,7 @@ class GradLoss(object):
         self._loss, self._grads = None, None
 
     def _get_loss_and_grads(self, img):
+        img = img.reshape((1, imgsize, imgsize, 3))
         outputs = generate_func([img])
         loss = outputs[0]
         grads = np.array(outputs[1:]).flatten().astype('float64')
@@ -103,8 +107,6 @@ class GradLoss(object):
     def loss(self, x):
         assert self._loss is None
         loss_value, grad_values = self._get_loss_and_grads(x)
-        print('LOSS', loss_value)
-        print('GRADS', grad_values)
         self._loss = loss_value
         self._grads = grad_values
         return self._loss
@@ -123,7 +125,7 @@ x = load_image('./img/content/nyc.jpg')
 for i in range(5):
     print("Iteration %d:" % (i))
     x, loss_at_min, description = fmin_l_bfgs_b(grad_and_loss.loss,
-                                        x, grad_and_loss.grads)
+                                        x.flatten(), grad_and_loss.grads, maxfun=20)
     print("Loss: %d" % (loss_at_min))
     img_out = deprocess_image(x)
     img_name = 'nyc_starrynight_iteration%d.jpg' % i
