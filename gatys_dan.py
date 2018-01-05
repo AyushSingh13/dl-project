@@ -19,9 +19,9 @@ style_img_path = 'img/style/leaves.jpg'
 # Number of iterations
 num_iterations = 100
 # Content Weight
-content_weight = 1.
+content_weight = 0.02
 # Style Weight 0.00000000001 without gram norm
-style_weight = 10.
+style_weight = 1.
 # Image size
 img_size = 256
 # Style image size
@@ -30,6 +30,8 @@ style_size = 256
 interpolation = 'bicubic'
 # Normalize gram matrix
 normalize_gram = True
+# Init Random
+init_random = False
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
@@ -40,7 +42,10 @@ save_image(content_img, "output/content.jpg", new_img_size)
 save_image(style_img, "output/style.jpg", new_style_size)
 
 # Randomly initialize the generated image
-generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001))
+if init_random:
+    generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001))
+else:
+    generated_img = K.variable(content_img.copy())
 
 # Load pretrained VGG19 model for content & style targets
 # Gatys et al. specify they do not use any fully-connected layers
