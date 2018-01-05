@@ -2,17 +2,24 @@ from keras.applications import vgg19
 import keras.backend as K
 from scipy.misc import imsave
 from keras.preprocessing.image import load_img, img_to_array, array_to_img
+from PIL import Image
 import numpy as np
 
 def load_image(path, size, interp):
-    img = load_img(path, target_size=(size,size), interpolation=interp)
+    img = load_img(path)# target_size=(size,size), interpolation=interp)
+    if interp == "neighbour":
+        resample = Image.NEAREST
+    if interp == "bicubic":
+        resample = Image.BICUBIC
+    img.thumbnail((size,size), resample)
+    size = (img.height, img.width, 3)
     img = img_to_array(img)
     img = np.expand_dims(img, axis=0)
     img = vgg19.preprocess_input(img)
-    return img
+    return img, size
 
 def deprocess_image(x, size):
-    x = x.reshape((size, size, 3))
+    x = x.reshape(size)
     # Remove zero-center by mean pixel
     x[:, :, 0] += 103.939
     x[:, :, 1] += 116.779

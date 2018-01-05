@@ -3,6 +3,7 @@ import keras.backend as K
 from keras.applications import vgg19
 from keras.optimizers import Adam
 from keras.layers import Input
+from keras.models import Model
 
 from utils import *
 
@@ -16,7 +17,7 @@ content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
 style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
-num_iterations = 1000
+num_iterations = 100
 # Content Weight
 content_weight = 1.
 # Style Weight
@@ -29,22 +30,21 @@ style_size = 256
 interpolation = 'bicubic'
 
 # Load images
-content_img = load_image(content_img_path, img_size, interpolation)
-style_img = load_image(style_img_path, style_size, interpolation)
+content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
+style_img, new_style_size = load_image(style_img_path, style_size, interpolation)
 
 # Save loaded images, see what we're dealing with
-save_image(content_img, "content.jpg", img_size)
-save_image(style_img, "style.jpg", img_size)
+save_image(content_img, "output/content.jpg", new_img_size)
+save_image(style_img, "output/style.jpg", new_style_size)
 
 # Randomly initialize the generated image
 generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001))
-#generated_img = K.random_normal(content_img.shape, stddev=0.001)
 
-# Load pretrained VGG19 model
+# Load pretrained VGG19 model for content & style targets
 # Gatys et al. specify they do not use any fully-connected layers
 # Average pooling used to give better gradient flow
-#model = vgg19.VGG19(include_top=False, pooling='avg')
-model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
+model = vgg19.VGG19(include_top=False, pooling='avg')
+#model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
 model_layers = {layer.name: layer.output for layer in model.layers}
 
 # Get the layers we want from VGG19
@@ -61,8 +61,11 @@ style_target = get_style([style_img])
 content_target_var = K.variable(content_target[0])
 style_target_var = [K.variable(t) for t in style_target]
 
-#model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=generated_img)
-#model2_layers = {layer.name: layer.output for layer in model.layers}
+# Load pretrained VGG19 model with input as generated_img 
+model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
+model_layers = {layer.name: layer.output for layer in model.layers}
+content_img_features = [model_layers[content_layer]]
+style_img_features = [gram_matrix(model_layers[l]) for l in style_layers]
 
 # Losses
 content_loss = content_loss(content_img_features[0], content_target_var)
@@ -79,7 +82,7 @@ updates = optimizer.get_updates(total_loss, [generated_img])
 outputs = [total_loss, total_content_loss, total_style_loss]
 step = K.function([], outputs, updates)
 
-for i in range(num_iterations):
+for i in range(num_iterations+1):
     print("Iteration %d of %d" % (i, num_iterations))
     res = step([])
     
@@ -88,5 +91,5 @@ for i in range(num_iterations):
     if i%20 == 0:
         y = K.get_value(generated_img)
         path = "output/out_%d.jpg" % i
-        img = save_image(y, path, img_size)
+        img = save_image(y, path, new_img_size)
 
