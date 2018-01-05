@@ -68,6 +68,10 @@ def style_loss(x, t):
 content_img = load_image(content_img_path, img_size)
 style_img = load_image(style_img_path, style_size)
 
+# Save loaded images, see what we're dealing with
+save_image(content_img, "content.jpg")
+save_image(style_img, "style.jpg")
+
 # Randomly initialize the generated image
 generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001))
 #generated_img = K.random_normal(content_img.shape, stddev=0.001)
