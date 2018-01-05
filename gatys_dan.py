@@ -15,19 +15,21 @@ style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 
 # Content Image Path
 content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
-style_img_path = 'img/style/starry_night.jpg'
+style_img_path = 'img/style/leaves.jpg'
 # Number of iterations
 num_iterations = 100
 # Content Weight
 content_weight = 1.
-# Style Weight
-style_weight = .00000000001
+# Style Weight 0.00000000001 without gram norm
+style_weight = 10.
 # Image size
 img_size = 256
 # Style image size
 style_size = 256
 # Interpolation method
 interpolation = 'bicubic'
+# Normalize gram matrix
+normalize_gram = True
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
@@ -49,7 +51,7 @@ model_layers = {layer.name: layer.output for layer in model.layers}
 
 # Get the layers we want from VGG19
 content_img_features = [model_layers[content_layer]]
-style_img_features = [gram_matrix(model_layers[l]) for l in style_layers]
+style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in style_layers]
 
 # Functions for getting the contents of the layers later
 get_content = K.function([model.input], content_img_features)
@@ -65,7 +67,7 @@ style_target_var = [K.variable(t) for t in style_target]
 model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
 model_layers = {layer.name: layer.output for layer in model.layers}
 content_img_features = [model_layers[content_layer]]
-style_img_features = [gram_matrix(model_layers[l]) for l in style_layers]
+style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in style_layers]
 
 # Losses
 content_loss = content_loss(content_img_features[0], content_target_var)

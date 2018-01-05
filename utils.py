@@ -34,11 +34,15 @@ def save_image(x,path,size):
     img = deprocess_image(x, size)
     imsave(path, img)
 
-def gram_matrix(x):
+def gram_matrix(x, norm):
     # Make 3d from 4d
-    f = K.reshape(x, K.shape(x)[1:4])
-    f = K.batch_flatten(K.permute_dimensions(f, (2,1,0)))
+    shape = K.shape(x)
+    H, W, C = shape[1], shape[2], shape[3]
+    f = K.reshape(x, (H,W,C))
+    f = K.batch_flatten(K.permute_dimensions(f, (2,0,1)))
     gram = K.dot(f, K.transpose(f))
+    if norm:
+        gram = gram / K.cast(C*H*W, x.dtype)
     return gram
 
 def content_loss(x, t):
