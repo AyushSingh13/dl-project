@@ -25,14 +25,16 @@ style_weight = .00000000001
 img_size = 256
 # Style image size
 style_size = 256
+# Interpolation method
+interpolation = 'bicubic'
 
 # Load images
-content_img = load_image(content_img_path, img_size)
-style_img = load_image(style_img_path, style_size)
+content_img = load_image(content_img_path, img_size, interpolation)
+style_img = load_image(style_img_path, style_size, interpolation)
 
 # Save loaded images, see what we're dealing with
-save_image(content_img, "content.jpg")
-save_image(style_img, "style.jpg")
+save_image(content_img, "content.jpg", img_size)
+save_image(style_img, "style.jpg", img_size)
 
 # Randomly initialize the generated image
 generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001))
@@ -86,5 +88,5 @@ for i in range(num_iterations):
     if i%20 == 0:
         y = K.get_value(generated_img)
         path = "output/out_%d.jpg" % i
-        img = save_image(y, path)
+        img = save_image(y, path, img_size)
 
