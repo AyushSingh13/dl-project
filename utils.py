@@ -6,8 +6,8 @@ from PIL import Image
 import numpy as np
 
 def load_image(path, size, interp):
-    img = load_img(path)# target_size=(size,size), interpolation=interp)
-    if interp == "neighbour":
+    img = load_img(path)#, target_size=(size,size)), interpolation=interp)
+    if interp == "nearest":
         resample = Image.NEAREST
     if interp == "bicubic":
         resample = Image.BICUBIC
@@ -30,6 +30,7 @@ def deprocess_image(x, size):
     return x
 
 def save_image(x,path,size):
+    x = x.copy()
     img = deprocess_image(x, size)
     imsave(path, img)
 
