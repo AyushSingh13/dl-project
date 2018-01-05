@@ -21,7 +21,9 @@ num_iterations = 100
 # Content Weight
 content_weight = 1.
 # Style Weight 0.00000000001 without gram norm
-style_weight = 10.
+style_weight = 0.00001
+# Total Varation Weight
+tv_weight = 1e-05
 # Image size
 img_size = 256
 # Style image size
@@ -29,7 +31,7 @@ style_size = 256
 # Interpolation method
 interpolation = 'bicubic'
 # Normalize gram matrix
-normalize_gram = True
+normalize_gram = False
 # Init Random
 init_random = True
 # Pooling: max or avg
@@ -81,21 +83,22 @@ content_loss = content_loss(content_img_features[0], content_target_var)
 style_loss = [style_loss(f,t) for f,t in zip(style_img_features, style_target_var)]
 
 # Total variation loss here???
+tv_loss = tv_weight * total_variation_loss(generated_img)
 
 total_content_loss = K.mean(content_loss) * content_weight
 total_style_loss = K.sum([K.mean(loss)*style_weight for loss in style_loss])
-total_loss = K.variable(0.) + total_content_loss + total_style_loss
+total_loss = K.variable(0.) + total_content_loss + total_style_loss + tv_loss
 
 optimizer = Adam(lr=10)
 updates = optimizer.get_updates(total_loss, [generated_img])
-outputs = [total_loss, total_content_loss, total_style_loss]
+outputs = [total_loss, total_content_loss, total_style_loss, tv_loss]
 step = K.function([], outputs, updates)
 
 for i in range(num_iterations+1):
     print("Iteration %d of %d" % (i, num_iterations))
     res = step([])
     
-    print("Content loss: %g; Style loss: %g; Total loss: %g;" % (res[1],res[2],res[0]))
+    print("Content loss: %g; Style loss: %g; TV loss: %g; Total loss: %g;" % (res[1],res[2],res[3],res[0]))
     
     if i%20 == 0:
         y = K.get_value(generated_img)

@@ -51,3 +51,7 @@ def content_loss(x, t):
 def style_loss(x, t):
     return K.mean(K.square(t - x), axis=(0,1))
 
+def total_variation_loss(x):
+    a = K.square(x[:, :-1, :-1, :] - x[:, 1:, :-1, :])
+    b = K.square(x[:, :-1, :-1, :] - x[:, :-1, 1:, :])
+    return K.sum(a + b, axis=(1, 2, 3))
