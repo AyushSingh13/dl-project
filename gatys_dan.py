@@ -15,7 +15,7 @@ style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 
 # Content Image Path
 content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
-style_img_path = 'img/style/leaves.jpg'
+style_img_path = 'img/style/seated-nude.jpg'
 # Number of iterations
 num_iterations = 100
 # Content Weight
@@ -31,7 +31,7 @@ interpolation = 'bicubic'
 # Normalize gram matrix
 normalize_gram = True
 # Init Random
-init_random = False
+init_random = True
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
