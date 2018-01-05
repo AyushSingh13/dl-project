@@ -47,9 +47,8 @@ def deprocess_image(x):
     x = np.clip(x, 0, 255).astype('uint8')
     return x
 
-def save_image(x,i):
+def save_image(x,path):
     img = deprocess_image(x)
-    path = "output/out_%d.jpg" % i
     imsave(path, img)
 
 def gram_matrix(x):
@@ -120,5 +119,6 @@ for i in range(num_iterations):
     
     if i%20 == 0:
         y = K.get_value(generated_img)
-        img = save_image(y, i)
+        path = "output/out_%d.jpg" % i
+        img = save_image(y, path)
 
