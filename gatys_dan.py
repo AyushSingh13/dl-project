@@ -15,15 +15,15 @@ content_layer = 'block4_conv2'
 style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
 
 # Content Image Path
-content_img_path = 'img/content/nyc.jpg'
+content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
 style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
 num_iterations = 1000
 # Content Weight
-content_weight = 1000.
+content_weight = 1.
 # Style Weight
-style_weight = .000001
+style_weight = .00000000001
 # Image size
 img_size = 256
 # Style image size
