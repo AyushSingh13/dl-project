@@ -13,15 +13,15 @@ content_layer = 'block4_conv2'
 style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
 
 # Content Image Path
-content_img_path = 'img/content/golden_gate.jpg'
+content_img_path = 'img/content/mountain.jpg'
 # Style Image Path
-style_img_path = 'img/style/seated-nude.jpg'
+style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
-num_iterations = 100
+num_iterations = 200
 # Content Weight
 content_weight = 1.
 # Style Weight 0.00000000001 without gram norm
-style_weight = 0.00001
+style_weight = 1e-10 
 # Total Varation Weight
 tv_weight = 1e-05
 # Image size
@@ -35,7 +35,7 @@ normalize_gram = False
 # Init Random
 init_random = True
 # Pooling: max or avg
-pooling = "max"
+pooling = "avg"
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
@@ -47,7 +47,7 @@ save_image(style_img, "output/style.jpg", new_style_size)
 
 # Randomly initialize the generated image
 if init_random:
-    generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001))
+    generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001, seed=1))
 else:
     generated_img = K.variable(content_img.copy())
 
