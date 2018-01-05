@@ -19,9 +19,9 @@ style_img_path = 'img/style/seated-nude.jpg'
 # Number of iterations
 num_iterations = 100
 # Content Weight
-content_weight = 0.02
+content_weight = 1.
 # Style Weight 0.00000000001 without gram norm
-style_weight = 1.
+style_weight = 10.
 # Image size
 img_size = 256
 # Style image size
@@ -32,6 +32,8 @@ interpolation = 'bicubic'
 normalize_gram = True
 # Init Random
 init_random = True
+# Pooling: max or avg
+pooling = "max"
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
@@ -50,7 +52,7 @@ else:
 # Load pretrained VGG19 model for content & style targets
 # Gatys et al. specify they do not use any fully-connected layers
 # Average pooling used to give better gradient flow
-model = vgg19.VGG19(include_top=False, pooling='avg')
+model = vgg19.VGG19(include_top=False, pooling=pooling)
 #model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
 model_layers = {layer.name: layer.output for layer in model.layers}
 
@@ -69,7 +71,7 @@ content_target_var = K.variable(content_target[0])
 style_target_var = [K.variable(t) for t in style_target]
 
 # Load pretrained VGG19 model with input as generated_img 
-model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
+model = vgg19.VGG19(include_top=False, pooling=pooling, input_tensor=Input(tensor=generated_img))
 model_layers = {layer.name: layer.output for layer in model.layers}
 content_img_features = [model_layers[content_layer]]
 style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in style_layers]
