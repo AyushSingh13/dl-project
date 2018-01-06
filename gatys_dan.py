@@ -17,25 +17,27 @@ content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
 style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
-num_iterations = 200
+num_iterations = 1000
 # Content Weight
-content_weight = 0.005
+content_weight = 0.02
 # Style Weight 0.00000000001 without gram norm
 style_weight = 1.
 # Total Varation Weight
 tv_weight = 8e-05
 # Image size
-img_size = 256
+img_size = 512
 # Style image size
-style_size = 256
+style_size = 512
 # Interpolation method
 interpolation = 'bicubic'
 # Normalize gram matrix
 normalize_gram = False
-# Init Random
-init_random = True
+# Init random/content
+init = "content"
 # Pooling: max or avg
 pooling = "avg"
+# Learning rate
+lr = 1.
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
@@ -46,9 +48,9 @@ save_image(content_img, "output/content.jpg", new_img_size)
 save_image(style_img, "output/style.jpg", new_style_size)
 
 # Randomly initialize the generated image
-if init_random:
+if init == 'random':
     generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001, seed=1))
-else:
+elif init == 'content':
     generated_img = K.variable(content_img.copy())
 
 # Load pretrained VGG19 model for content & style targets
@@ -89,7 +91,7 @@ total_content_loss = content_loss * content_weight
 total_style_loss = K.sum(style_loss)/len(style_loss) * style_weight
 total_loss = K.variable(0.) + total_content_loss + total_style_loss + tv_loss
 
-optimizer = Adam(lr=10)
+optimizer = Adam(lr=lr)
 updates = optimizer.get_updates(total_loss, [generated_img])
 outputs = [total_loss, total_content_loss, total_style_loss, tv_loss]
 step = K.function([], outputs, updates)
