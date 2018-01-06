@@ -33,7 +33,7 @@ interpolation = 'bicubic'
 # Normalize gram matrix
 normalize_gram = False
 # Init random/content
-init = "content"
+init = "random"
 # Pooling: max or avg
 pooling = "avg"
 # Learning rate
