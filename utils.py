@@ -51,8 +51,12 @@ def content_loss(x, t):
     t = K.reshape(t, K.shape(t)[1:4])
     return K.sum(K.square(t - x))
 
-def style_loss(x, t, size):
-    return K.sum(K.square(t - x)) / (4. * (size[2] ** 2) * ((size[0]*size[1]) ** 2))
+def style_loss(x, t, size, scale=True):
+    if scale:
+        div = (4. * (size[2] ** 2) * ((size[0]*size[1]) ** 2))
+    else:
+        div = 1.
+    return K.sum(K.square(t - x)) / div
 
 def total_variation_loss(x):
     a = K.square(x[:, :-1, :-1, :] - x[:, 1:, :-1, :])

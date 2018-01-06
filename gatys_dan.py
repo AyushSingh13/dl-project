@@ -25,19 +25,21 @@ style_weight = 1.
 # Total Varation Weight
 tv_weight = 8e-05
 # Image size
-img_size = 512
+img_size = 256
 # Style image size
 style_size = 512
 # Interpolation method
 interpolation = 'bicubic'
 # Normalize gram matrix
 normalize_gram = False
+# Scale style loss
+scale_style_loss = True
 # Init random/content
 init = "random"
 # Pooling: max or avg
 pooling = "avg"
 # Learning rate
-lr = 1.
+lr = 10.
 
 # Load images
 content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
@@ -82,7 +84,7 @@ style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in styl
 
 # Losses
 content_loss = content_loss(content_img_features[0], content_target_var)
-style_loss = [style_loss(f,t,new_img_size) for f,t in zip(style_img_features, style_target_var)]
+style_loss = [style_loss(f,t,new_img_size,scale_style_loss) for f,t in zip(style_img_features, style_target_var)]
 
 # Total variation loss here???
 tv_loss = tv_weight * total_variation_loss(generated_img)
