@@ -8,7 +8,7 @@ from keras.models import Model
 from utils import *
 
 # Image reconstruction from layer 'conv4_2'
-content_layer = 'block4_conv2'
+content_layer = 'block5_conv2'
 # Style reconstruction layers
 style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
 
@@ -19,7 +19,7 @@ style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
 num_iterations = 200
 # Content Weight
-content_weight = 0.02
+content_weight = 10.
 # Style Weight 0.00000000001 without gram norm
 style_weight = 1.
 # Total Varation Weight
