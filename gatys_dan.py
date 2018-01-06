@@ -17,7 +17,7 @@ content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
 style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
-num_iterations = 1000
+num_iterations = 200
 # Content Weight
 content_weight = 0.02
 # Style Weight 0.00000000001 without gram norm
@@ -27,7 +27,7 @@ tv_weight = 8e-05
 # Image size
 img_size = 256
 # Style image size
-style_size = 512
+style_size = 256
 # Interpolation method
 interpolation = 'bicubic'
 # Normalize gram matrix
