@@ -46,10 +46,13 @@ def gram_matrix(x, norm):
     return gram
 
 def content_loss(x, t):
-    return K.mean(K.square(t - x), axis=(1,2,3))
+    #return K.mean(K.square(t - x), axis=(1,2,3))
+    x = K.reshape(x, K.shape(x)[1:4])
+    t = K.reshape(t, K.shape(t)[1:4])
+    return K.sum(K.square(t - x))
 
-def style_loss(x, t):
-    return K.mean(K.square(t - x), axis=(0,1))
+def style_loss(x, t, size):
+    return K.sum(K.square(t - x)) / (4. * (size[2] ** 2) * ((size[0]*size[1]) ** 2))
 
 def total_variation_loss(x):
     a = K.square(x[:, :-1, :-1, :] - x[:, 1:, :-1, :])

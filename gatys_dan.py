@@ -13,17 +13,17 @@ content_layer = 'block4_conv2'
 style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
 
 # Content Image Path
-content_img_path = 'img/content/mountain.jpg'
+content_img_path = 'img/content/golden_gate.jpg'
 # Style Image Path
 style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
 num_iterations = 200
 # Content Weight
-content_weight = 1.
+content_weight = 0.005
 # Style Weight 0.00000000001 without gram norm
-style_weight = 1e-10 
+style_weight = 1.
 # Total Varation Weight
-tv_weight = 1e-05
+tv_weight = 8e-05
 # Image size
 img_size = 256
 # Style image size
@@ -80,13 +80,13 @@ style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in styl
 
 # Losses
 content_loss = content_loss(content_img_features[0], content_target_var)
-style_loss = [style_loss(f,t) for f,t in zip(style_img_features, style_target_var)]
+style_loss = [style_loss(f,t,new_img_size) for f,t in zip(style_img_features, style_target_var)]
 
 # Total variation loss here???
 tv_loss = tv_weight * total_variation_loss(generated_img)
 
-total_content_loss = K.mean(content_loss) * content_weight
-total_style_loss = K.sum([K.mean(loss)*style_weight for loss in style_loss])
+total_content_loss = content_loss * content_weight
+total_style_loss = K.sum(style_loss)/len(style_loss) * style_weight
 total_loss = K.variable(0.) + total_content_loss + total_style_loss + tv_loss
 
 optimizer = Adam(lr=10)
