@@ -13,21 +13,21 @@ content_layer = 'block4_conv2'
 style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
 
 # Content Image Path
-content_img_path = 'img/content/golden_gate.jpg'
+content_img_path = 'img/style/starry_night.jpg'
 # Style Image Path
 style_img_path = 'img/style/starry_night.jpg'
 # Number of iterations
-num_iterations = 200
+num_iterations = 2000
 # Content Weight
-content_weight = 0.02
+content_weight = 0.
 # Style Weight 0.00000000001 without gram norm
-style_weight = 1.
+style_weight = 1000.
 # Total Varation Weight
-tv_weight = 8e-05
+tv_weight = 0.
 # Image size
-img_size = 256
+img_size = 512
 # Style image size
-style_size = 256
+style_size = 512
 # Interpolation method
 interpolation = 'bicubic'
 # Normalize gram matrix
@@ -46,12 +46,13 @@ content_img, new_img_size = load_image(content_img_path, img_size, interpolation
 style_img, new_style_size = load_image(style_img_path, style_size, interpolation)
 
 # Save loaded images, see what we're dealing with
-save_image(content_img, "output/content.jpg", new_img_size)
-save_image(style_img, "output/style.jpg", new_style_size)
+#save_image(content_img, "output/content.jpg", new_img_size)
+#save_image(style_img, "output/style.jpg", new_style_size)
 
 # Randomly initialize the generated image
 if init == 'random':
     generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001, seed=1))
+    #generated_img = K.variable(K.random_uniform(content_img.shape, -127, 127, seed=1))
 elif init == 'content':
     generated_img = K.variable(content_img.copy())
 
@@ -93,19 +94,31 @@ total_content_loss = content_loss * content_weight
 total_style_loss = K.sum(style_loss)/len(style_loss) * style_weight
 total_loss = K.variable(0.) + total_content_loss + total_style_loss + tv_loss
 
-optimizer = Adam(lr=lr)
+optimizer = Adam(lr=10)#, decay=0.01)
 updates = optimizer.get_updates(total_loss, [generated_img])
 outputs = [total_loss, total_content_loss, total_style_loss, tv_loss]
 step = K.function([], outputs, updates)
 
+losses=[]
 for i in range(num_iterations+1):
     print("Iteration %d of %d" % (i, num_iterations))
-    res = step([])
-    
-    print("Content loss: %g; Style loss: %g; TV loss: %g; Total loss: %g;" % (res[1],res[2],res[3],res[0]))
-    
+   
     if i%20 == 0:
         y = K.get_value(generated_img)
-        path = "output/out_%d.jpg" % i
+        path = "gpuoutput/out_%d.jpg" % i
         img = save_image(y, path, new_img_size)
 
+    res = step([])
+    print("Content loss: %g; Style loss: %g; TV loss: %g; Total loss: %g;" % (res[1],res[2],res[3],res[0]))
+    
+    losses.append((0,res[0]))
+    
+
+    #if i > 300:
+    #K.set_value(optimizer.lr, max(1, lr-i))
+    if i > 500:
+        K.set_value(optimizer.lr, 1)
+    #print("%f" % K.get_value(optimizer.lr))
+
+with open('gpuoutput/losses.txt', 'w') as f:
+    f.write('\n'.join('%d, %d' % (x,y) for x,y in losses))
