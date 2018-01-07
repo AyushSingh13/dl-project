@@ -1,133 +1,124 @@
-from keras.preprocessing.image import load_img, img_to_array, array_to_img
+import keras
 import keras.backend as K
-import tensorflow as tf
-import numpy as np
-# image_data_format -> 'channels_last'
+from keras.applications import vgg19
+from keras.optimizers import Adam
+from keras.layers import Input
+from keras.models import Model
 
-import keras.applications.vgg19 as vgg19
-from scipy.misc import imsave
-from scipy.optimize import fmin_l_bfgs_b
+from utils import *
 
 # Image reconstruction from layer 'conv4_2'
-content_layer = 'block4_conv2'
+content_layer = 'block5_conv2'
+# Style reconstruction layers
+style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
 
-# Style reconstruciton layers
-style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1',
-                'block4_conv1', 'block5_conv1']
+# Content Image Path
+content_img_path = 'img/style/starry_night.jpg'
+# Style Image Path
+style_img_path = 'img/style/starry_night.jpg'
+# Number of iterations
+num_iterations = 2000
+# Content Weight
+content_weight = 10.
+# Style Weight 0.00000000001 without gram norm
+style_weight = 1000.
+# Total Varation Weight
+tv_weight = 0.
+# Image size
+img_size = 512
+# Style image size
+style_size = 512
+# Interpolation method
+interpolation = 'bicubic'
+# Normalize gram matrix
+normalize_gram = False
+# Scale style loss
+scale_style_loss = True
+# Init random/content
+init = "random"
+# Pooling: max or avg
+pooling = "avg"
+# Learning rate
+lr = 10.
 
-imgsize = 256
+# Load images
+content_img, new_img_size = load_image(content_img_path, img_size, interpolation)
+style_img, new_style_size = load_image(style_img_path, style_size, interpolation)
 
-style_weight, content_weight = 1, 1
+# Save loaded images, see what we're dealing with
+#save_image(content_img, "output/content.jpg", new_img_size)
+#save_image(style_img, "output/style.jpg", new_style_size)
 
-def load_image(path):
-    img = np.expand_dims(img_to_array(load_img(path, target_size=(imgsize, imgsize))), axis=0)
-    return vgg19.preprocess_input(img)
+# Randomly initialize the generated image
+if init == 'random':
+    generated_img = K.variable(K.random_normal(content_img.shape, stddev=0.001, seed=1))
+    #generated_img = K.variable(K.random_uniform(content_img.shape, -127, 127, seed=1))
+elif init == 'content':
+    generated_img = K.variable(content_img.copy())
 
-# Taken from Keras example
-def deprocess_image(x):
-    x = x.reshape((imgsize, imgsize, 3))
-    # Remove zero-center by mean pixel
-    x[:, :, 0] += 103.939
-    x[:, :, 1] += 116.779
-    x[:, :, 2] += 123.68
-    # 'BGR'->'RGB'
-    x = x[:, :, ::-1]
-    x = np.clip(x, 0, 255).astype('uint8')
-    return x
-
-def content_loss(content, new):
-    return 0.5 * K.sum((content - new) ** 2)
-
-def style_loss(style, new):
-    style_gram, new_gram = gram_matrix(style), gram_matrix(new)
-    size = imgsize ** 2
-    channels = 3
-    return K.sum(K.square(style_gram - new_gram)) / (4. * (channels ** 2) * (size ** 2))
-
-def total_loss(content, style, new):
-    content = content_weight * content_loss(content, new)
-    style = style_weight * style_loss(style, new)
-    return content + style
-
-def gram_matrix(img):
-    f = K.batch_flatten(K.permute_dimensions(img, (2, 0, 1)))
-    return K.dot(f, K.transpose(f))
-
-content_img = K.variable(load_image('./img/content/nyc.jpg'))
-style_img = K.variable(load_image('./img/style/starry_night.jpg'))
-generated_img = K.placeholder((1, imgsize, imgsize, 3))
-
-assert content_img.shape == style_img.shape == generated_img.shape == (1, imgsize, imgsize, 3)
-
-input_tensor = K.concatenate([content_img, style_img, generated_img], axis=0)
-
+# Load pretrained VGG19 model for content & style targets
 # Gatys et al. specify they do not use any fully-connected layers
 # Average pooling used to give better gradient flow
-model = vgg19.VGG19(input_tensor=input_tensor, include_top=False, pooling='avg')
+model = vgg19.VGG19(include_top=False, pooling=pooling)
+#model = vgg19.VGG19(include_top=False, pooling='avg', input_tensor=Input(tensor=generated_img))
+model_layers = {layer.name: layer.output for layer in model.layers}
 
-layers = {layer.name: layer.output for layer in model.layers}
+# Get the layers we want from VGG19
+content_img_features = [model_layers[content_layer]]
+style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in style_layers]
 
-# Content representation
-total_loss = K.variable(0.)
-conv4_2_features = layers[content_layer]
-content_img_features = conv4_2_features[0, :, :, :] # 1st element in input_tensor to VGG
-generated_img_features = conv4_2_features[2, :, :, :] # 3rd element in input_tensor to VGG
-total_loss += content_loss(content_img_features, generated_img_features)
+# Functions for getting the contents of the layers later
+get_content = K.function([model.input], content_img_features)
+get_style = K.function([model.input], style_img_features)
 
-# Style representation
-style_img_loss = K.variable(0.)
-for name in style_layers:
-    layer_features = layers[name]
-    style_img_features = layer_features[1, :, :, :]
-    generated_img_features = layer_features[2, :, :, :]
-    sl = style_loss(style_img_features, generated_img_features)
-    total_loss += (style_weight / len(style_layers)) * sl
+content_target = get_content([content_img])
+style_target = get_style([style_img])
 
-loss_grads = K.gradients(total_loss, generated_img)
+content_target_var = K.variable(content_target[0])
+style_target_var = [K.variable(t) for t in style_target]
 
-outputs = [total_loss]
-if type(loss_grads) in {list, tuple}:
-    outputs += loss_grads
-else:
-    outputs.append(loss_grads)
+# Load pretrained VGG19 model with input as generated_img 
+model = vgg19.VGG19(include_top=False, pooling=pooling, input_tensor=Input(tensor=generated_img))
+model_layers = {layer.name: layer.output for layer in model.layers}
+content_img_features = [model_layers[content_layer]]
+style_img_features = [gram_matrix(model_layers[l], normalize_gram) for l in style_layers]
 
-generate_func = K.function([generated_img], outputs)
+# Losses
+content_loss = content_loss(content_img_features[0], content_target_var)
+style_loss = [style_loss(f,t,new_img_size,scale_style_loss) for f,t in zip(style_img_features, style_target_var)]
 
-class GradLoss(object):
-    def __init__(self):
-        self._loss, self._grads = None, None
+# Total variation loss here???
+tv_loss = tv_weight * total_variation_loss(generated_img)
 
-    def _get_loss_and_grads(self, img):
-        img = img.reshape((1, imgsize, imgsize, 3))
-        outputs = generate_func([img])
-        loss = outputs[0]
-        grads = np.array(outputs[1:]).flatten().astype('float64')
-        return loss, grads
+total_content_loss = content_loss * content_weight
+total_style_loss = K.sum(style_loss)/len(style_loss) * style_weight
+total_loss = K.variable(0.) + total_content_loss + total_style_loss + tv_loss
 
-    def loss(self, x):
-        assert self._loss is None
-        loss_value, grad_values = self._get_loss_and_grads(x)
-        self._loss = loss_value
-        self._grads = grad_values
-        return self._loss
+optimizer = Adam(lr=10)#, decay=0.01)
+updates = optimizer.get_updates(total_loss, [generated_img])
+outputs = [total_loss, total_content_loss, total_style_loss, tv_loss]
+step = K.function([], outputs, updates)
 
-    def grads(self, x):
-        assert self._loss is not None
-        grad_values = np.copy(self._grads)
-        self._loss = None
-        self._grads = None
-        return grad_values
+losses=[]
+for i in range(num_iterations+1):
+    print("Iteration %d of %d" % (i, num_iterations))
+   
+    if i%20 == 0:
+        y = K.get_value(generated_img)
+        path = "gpuoutput/out_%d.jpg" % i
+        img = save_image(y, path, new_img_size)
 
-grad_and_loss = GradLoss()
-
-x = load_image('./img/content/nyc.jpg')
-
-for i in range(5):
-    print("Iteration %d:" % (i))
-    x, loss_at_min, description = fmin_l_bfgs_b(grad_and_loss.loss,
-                                        x.flatten(), grad_and_loss.grads, maxfun=20)
-    print("Loss: %d" % (loss_at_min))
-    img_out = deprocess_image(x)
-    img_name = 'nyc_starrynight_iteration%d.jpg' % i
-    imsave(img_name, img_out)
+    res = step([])
+    print("Content loss: %g; Style loss: %g; TV loss: %g; Total loss: %g;" % (res[1],res[2],res[3],res[0]))
     
+    losses.append((0,res[0]))
+    
+
+    #if i > 300:
+    #K.set_value(optimizer.lr, max(1, lr-i))
+    if i > 500:
+        K.set_value(optimizer.lr, 1)
+    #print("%f" % K.get_value(optimizer.lr))
+
+with open('gpuoutput/losses.txt', 'w') as f:
+    f.write('\n'.join('%d, %d' % (x,y) for x,y in losses))
